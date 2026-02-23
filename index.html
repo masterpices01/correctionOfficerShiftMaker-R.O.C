@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>班表自訂系統 - 完整功能版</title>
+    <script src="jspdf.umd.min.js"></script>
+    <style>
+        :root { --primary: #2d3748; --bg: #f7fafc; }
+        body { font-family: "PingFang TC", "Microsoft JhengHei", sans-serif; background: var(--bg); display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .container { display: flex; gap: 20px; max-width: 1300px; width: 100%; }
+        .controls { flex: 1; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: sticky; top: 10px; height: fit-content; max-height: 95vh; overflow-y: auto; }
+        .field { margin-bottom: 12px; }
+        label { display: block; margin-bottom: 4px; font-weight: bold; color: #4a5568; font-size: 0.85rem; }
+        input, select { width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box; }
+        .preview { flex: 1.5; display: flex; flex-direction: column; align-items: center; }
+        canvas { background: white; box-shadow: 0 10px 15px rgba(0,0,0,0.2); border-radius: 4px; max-width: 100%; }
+        .btn-group { display: flex; gap: 10px; margin-top: 15px; width: 100%; }
+        button { flex: 1; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.95rem; transition: 0.3s; font-weight: bold; }
+        .download-png { background: #718096; color: white; }
+        .download-pdf { background: #2d3748; color: white; }
+        .status-tag { font-size: 0.75rem; color: #48bb78; visibility: hidden; text-align: center; margin-top: 5px; }
+        h3 { font-size: 1rem; margin: 15px 0 10px 0; border-left: 4px solid #4a5568; padding-left: 8px; color: #2d3748; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="controls">
+        <h2 style="font-size: 1.2rem; margin-top: 0;">班表與飯單系統</h2>
+        
+        <div class="field"><label>民國年份</label><input type="number" id="year" value="115"></div>
+        <div class="field">
+            <label>顯示半年度</label>
+            <select id="halfYear">
+                <option value="0" selected>上半年 (01-06月)</option>
+                <option value="1">下半年 (07-12月)</option>
+            </select>
+        </div>
+        <div class="field"><label>第一天上班日 (yyyy-mm-dd)</label><input type="date" id="startDate" value="2026-01-03"></div>
+
+        <h3>緊招週期設定 (色塊)</h3>
+        <div class="field"><label>緊招起始日 (yyyy-mm-dd)</label><input type="date" id="urgentDate" value="2026-02-06"></div>
+        <div class="field"><label>緊招週期 (天)</label><input type="number" id="urgentCycle" value="18"></div>
+        <div class="field"><label>緊招色塊顏色</label><input type="color" id="urgentColor" value="#dabed9"></div>
+
+        <h3>每月飯單設定 (標籤)</h3>
+        <div class="field"><label>每月交單日期 (1-31)</label><input type="number" id="foodOrderDay" value="20" min="1" max="31"></div>
+        <div class="field"><label>飯單標籤顏色</label><input type="color" id="foodTagColor" value="#d61f5a"></div>
+
+        <h3>標題與色彩</h3>
+        <div class="field"><label>標題文字</label><input type="text" id="titleText" value="戒護科班表"></div>
+        <div class="field"><label>上班日顏色</label><input type="color" id="workColor" value="#b8b8d8"></div>
+        <div class="field"><label>平日文字顏色</label><input type="color" id="weekdayTextColor" value="#2d3748"></div>
+        <div class="field"><label>假日文字顏色</label><input type="color" id="weekendTextColor" value="#e53e3e"></div>
+
+        <input type="hidden" id="borderColor" value="#000000">
+        <div id="saveStatus" class="status-tag">✓ 已儲存設定</div>
+    </div>
+
+    <div class="preview">
+        <canvas id="scheduleCanvas"></canvas>
+        <div class="btn-group">
+            <button class="download-png" onclick="downloadImage()">下載 PNG</button>
+            <button class="download-pdf" onclick="downloadPDF()">輸出 PDF (自動命名)</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const canvas = document.getElementById('scheduleCanvas');
+const ctx = canvas.getContext('2d');
+const inputs = [
+    'year', 'halfYear', 'startDate', 'workColor', 
+    'weekdayTextColor', 'weekendTextColor', 
+    'borderColor', 'titleText',
+    'urgentDate', 'urgentCycle', 'urgentColor',
+    'foodOrderDay', 'foodTagColor'
+];
+
+const CARD_W = 540;
+const CARD_H = 856;
+
+window.onload = () => {
+    inputs.forEach(id => {
+        const savedValue = localStorage.getItem('jail_final_' + id);
+        if (savedValue !== null) document.getElementById(id).value = savedValue;
+        document.getElementById(id).addEventListener('input', () => { saveAndDraw(); });
+    });
+    draw();
+};
+
+function saveAndDraw() {
+    inputs.forEach(id => localStorage.setItem('jail_final_' + id, document.getElementById(id).value));
+    const tag = document.getElementById('saveStatus');
+    tag.style.visibility = 'visible';
+    setTimeout(() => { tag.style.visibility = 'hidden'; }, 1000);
+    draw();
+}
+
+function draw() {
+    const dpr = 2; 
+    canvas.width = CARD_W * dpr;
+    canvas.height = CARD_H * dpr;
+    ctx.scale(dpr, dpr);
+    ctx.fillStyle = "white";
+    ctx.fillRect(0, 0, CARD_W, CARD_H);
+
+    const config = {};
+    inputs.forEach(id => config[id] = document.getElementById(id).value);
+
+    const adYear = parseInt(config.year) + 1911;
+    const [sY, sM, sD] = config.startDate.split('-').map(Number);
+    const cycleStart = new Date(sY, sM - 1, sD).getTime();
+    
+    const [uY, uM, uD] = config.urgentDate.split('-').map(Number);
+    const urgentStart = new Date(uY, uM - 1, uD).getTime();
+    const uCycle = parseInt(config.urgentCycle) || 18;
+
+    // 標題 (顯示年份 + 標題)
+    ctx.fillStyle = config.weekdayTextColor;
+    ctx.font = "bold 26px Sans-Serif";
+    ctx.textAlign = "center";
+    ctx.fillText(`${config.year}年 ${config.titleText}`, CARD_W / 2, 45);
+
+    const months = config.halfYear == "0" ? [1, 2, 3, 4, 5, 6] : [7, 8, 9, 10, 11, 12];
+    const marginX = 15, marginY = 15;
+    const mWidth = (CARD_W - marginX * 3) / 2;
+    const mHeight = (CARD_H - 100) / 3.2;
+
+    months.forEach((month, i) => {
+        const x = marginX + (i % 2) * (mWidth + marginX);
+        const y = 80 + Math.floor(i / 2) * (mHeight + marginY);
+        const titleH = 22, cellW = mWidth / 7, cellH = (mHeight - titleH) / 7;
+
+        // 月份表頭
+        ctx.fillStyle = config.workColor;
+        ctx.globalAlpha = 0.6;
+        ctx.fillRect(x, y, mWidth, titleH);
+        ctx.globalAlpha = 1.0;
+        ctx.strokeStyle = config.borderColor;
+        ctx.lineWidth = 1.2;
+        ctx.strokeRect(x, y, mWidth, mHeight);
+        ctx.strokeRect(x, y, mWidth, titleH);
+        ctx.fillStyle = config.weekdayTextColor;
+        ctx.font = "bold 14px Sans-Serif";
+        ctx.fillText(`${month}月`, x + mWidth / 2, y + 16);
+
+        // 星期列
+        const weeks = ['日','一','二','三','四','五','六'];
+        weeks.forEach((w, idx) => {
+            const tx = x + idx * cellW, ty = y + titleH;
+            ctx.strokeRect(tx, ty, cellW, cellH);
+            ctx.fillStyle = (idx === 0 || idx === 6) ? config.weekendTextColor : config.weekdayTextColor;
+            ctx.font = "bold 11px Sans-Serif";
+            ctx.fillText(w, tx + cellW / 2, ty + 16);
+        });
+
+        const firstDay = new Date(adYear, month - 1, 1);
+        const lastDay = new Date(adYear, month, 0);
+        let curX = firstDay.getDay(), curY = 1;
+
+        for (let d = 1; d <= lastDay.getDate(); d++) {
+            const dx = x + curX * cellW, dy = y + titleH + (curY * cellH);
+            const thisDate = new Date(adYear, month - 1, d).getTime();
+            
+            // 1. 緊招色塊 (先畫，如果有上班色塊會疊在上面或被這覆蓋，依您需求緊招不衝突)
+            const diffUrgent = Math.round((thisDate - urgentStart) / 86400000);
+            if (((diffUrgent % uCycle) + uCycle) % uCycle === 0) {
+                ctx.fillStyle = config.urgentColor;
+                ctx.fillRect(dx + 0.8, dy + 0.8, cellW - 1.6, cellH - 1.6);
+            }
+
+            // 2. 上班日色塊
+            const diffDays = Math.round((thisDate - cycleStart) / 86400000);
+            if (((diffDays % 6) + 6) % 6 === 0 || ((diffDays % 6) + 6) % 6 === 2) {
+                ctx.fillStyle = config.workColor;
+                ctx.fillRect(dx + 0.8, dy + 0.8, cellW - 1.6, cellH - 1.6);
+            }
+
+            // 3. 飯單三角形標籤
+            if (d == parseInt(config.foodOrderDay)) {
+                ctx.fillStyle = config.foodTagColor;
+                ctx.beginPath();
+                ctx.moveTo(dx + 1, dy + 1);
+                ctx.lineTo(dx + 12, dy + 1);
+                ctx.lineTo(dx + 1, dy + 12);
+                ctx.fill();
+            }
+
+            ctx.strokeStyle = config.borderColor;
+            ctx.strokeRect(dx, dy, cellW, cellH);
+            ctx.fillStyle = (curX === 0 || curX === 6) ? config.weekendTextColor : config.weekdayTextColor;
+            ctx.font = "12px Arial";
+            ctx.fillText(d, dx + cellW / 2, dy + 16);
+
+            curX++; if (curX > 6) { curX = 0; curY++; }
+        }
+    });
+
+    ctx.lineWidth = 2; ctx.strokeStyle = config.borderColor;
+    ctx.strokeRect(1, 1, CARD_W - 2, CARD_H - 2);
+}
+
+function getOutputName() {
+    const year = document.getElementById('year').value;
+    const half = document.getElementById('halfYear').value == "0" ? "上半年" : "下半年";
+    const title = document.getElementById('titleText').value;
+    return `${year}年_${half}_${title}`;
+}
+
+function downloadImage() {
+    const link = document.createElement('a');
+    link.download = `${getOutputName()}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+}
+
+async function downloadPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p', 'mm', 'a4');
+    const imgData = canvas.toDataURL('image/png');
+    const cardW = 54.0, cardH = 85.6;
+    const marginX = (210 - (cardW * 2)) / 3, marginY = 10;
+
+    for (let row = 0; row < 5; row++) {
+        for (let col = 0; col < 2; col++) {
+            const x = marginX + col * (cardW + marginX);
+            const y = marginY + row * (cardH + 5);
+            doc.addImage(imgData, 'PNG', x, y, cardW, cardH);
+            doc.setDrawColor(220); doc.setLineWidth(0.1); doc.rect(x, y, cardW, cardH);
+        }
+    }
+    doc.save(`${getOutputName()}.pdf`);
+}
+</script>
+</body>
+</html>
