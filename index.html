@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>班表自訂系統 - 完整功能版</title>
+    <title>戒護班表系統 - 打卡編號增強版</title>
     <script src="jspdf.umd.min.js"></script>
     <style>
         :root { --primary: #2d3748; --bg: #f7fafc; }
-        body { font-family: "PingFang TC", "Microsoft JhengHei", sans-serif; background: var(--bg); display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        body { font-family: "Microsoft JhengHei", Arial, sans-serif; background: var(--bg); display: flex; flex-direction: column; align-items: center; padding: 20px; }
         .container { display: flex; gap: 20px; max-width: 1300px; width: 100%; }
         .controls { flex: 1; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: sticky; top: 10px; height: fit-content; max-height: 95vh; overflow-y: auto; }
         .field { margin-bottom: 12px; }
@@ -15,10 +15,11 @@
         input, select { width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box; }
         .preview { flex: 1.5; display: flex; flex-direction: column; align-items: center; }
         canvas { background: white; box-shadow: 0 10px 15px rgba(0,0,0,0.2); border-radius: 4px; max-width: 100%; }
-        .btn-group { display: flex; gap: 10px; margin-top: 15px; width: 100%; }
-        button { flex: 1; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.95rem; transition: 0.3s; font-weight: bold; }
+        .btn-group { display: flex; gap: 8px; margin-top: 15px; width: 100%; flex-wrap: wrap; }
+        button { flex: 1; min-width: 100px; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.95rem; transition: 0.3s; font-weight: bold; }
         .download-png { background: #718096; color: white; }
         .download-pdf { background: #2d3748; color: white; }
+        .theme-btn { padding: 6px 10px; font-size: 0.8rem; color: white; }
         .status-tag { font-size: 0.75rem; color: #48bb78; visibility: hidden; text-align: center; margin-top: 5px; }
         h3 { font-size: 1rem; margin: 15px 0 10px 0; border-left: 4px solid #4a5568; padding-left: 8px; color: #2d3748; }
     </style>
@@ -27,7 +28,7 @@
 
 <div class="container">
     <div class="controls">
-        <h2 style="font-size: 1.2rem; margin-top: 0;">班表與飯單系統</h2>
+        <h2 style="font-size: 1.2rem; margin-top: 0;">戒護班表與飯單系統</h2>
         
         <div class="field"><label>民國年份</label><input type="number" id="year" value="115"></div>
         <div class="field">
@@ -37,32 +38,39 @@
                 <option value="1">下半年 (07-12月)</option>
             </select>
         </div>
-        <div class="field"><label>第一天上班日 (yyyy-mm-dd)</label><input type="date" id="startDate" value="2026-01-03"></div>
+        <div class="field"><label>打卡編號</label><input type="text" id="staffId" value="00001"></div>
+        <div class="field"><label>第一天上班日</label><input type="date" id="startDate" value="2026-01-03"></div>
 
-        <h3>緊招週期設定 (色塊)</h3>
-        <div class="field"><label>緊招起始日 (yyyy-mm-dd)</label><input type="date" id="urgentDate" value="2026-02-06"></div>
+        <h3>核心排程設定</h3>
+        <div class="field"><label>緊招起始日</label><input type="date" id="urgentDate" value="2026-02-06"></div>
         <div class="field"><label>緊招週期 (天)</label><input type="number" id="urgentCycle" value="18"></div>
-        <div class="field"><label>緊招色塊顏色</label><input type="color" id="urgentColor" value="#dabed9"></div>
+        <div class="field"><label>每月交單日期 (1-31)</label><input type="number" id="foodOrderDay" value="20"></div>
 
-        <h3>每月飯單設定 (標籤)</h3>
-        <div class="field"><label>每月交單日期 (1-31)</label><input type="number" id="foodOrderDay" value="20" min="1" max="31"></div>
-        <div class="field"><label>飯單標籤顏色</label><input type="color" id="foodTagColor" value="#d61f5a"></div>
+        <h3>視覺主題</h3>
+        <div class="btn-group" style="margin-bottom: 15px;">
+            <button class="theme-btn" style="background: #2d3748;" onclick="setTheme('default')">預設藍紫</button>
+            <button class="theme-btn" style="background: #e53e3e;" onclick="setTheme('red')">熱情紅</button>
+            <button class="theme-btn" style="background: #38a169;" onclick="setTheme('green')">森林綠</button>
+            <button class="theme-btn" style="background: #3182ce;" onclick="setTheme('blue')">商務藍</button>
+        </div>
 
-        <h3>標題與色彩</h3>
         <div class="field"><label>標題文字</label><input type="text" id="titleText" value="戒護科班表"></div>
         <div class="field"><label>上班日顏色</label><input type="color" id="workColor" value="#b8b8d8"></div>
-        <div class="field"><label>平日文字顏色</label><input type="color" id="weekdayTextColor" value="#2d3748"></div>
-        <div class="field"><label>假日文字顏色</label><input type="color" id="weekendTextColor" value="#e53e3e"></div>
+        <div class="field"><label>緊招色塊顏色</label><input type="color" id="urgentColor" value="#dabed9"></div>
+        <div class="field"><label>飯單標籤顏色</label><input type="color" id="foodTagColor" value="#d61f5a"></div>
 
+        <input type="hidden" id="weekdayTextColor" value="#2d3748">
+        <input type="hidden" id="weekendTextColor" value="#e53e3e">
         <input type="hidden" id="borderColor" value="#000000">
-        <div id="saveStatus" class="status-tag">✓ 已儲存設定</div>
+
+        <div id="saveStatus" class="status-tag">✓ 設定已儲存</div>
     </div>
 
     <div class="preview">
         <canvas id="scheduleCanvas"></canvas>
         <div class="btn-group">
-            <button class="download-png" onclick="downloadImage()">下載 PNG</button>
-            <button class="download-pdf" onclick="downloadPDF()">輸出 PDF (自動命名)</button>
+            <button class="download-png" onclick="downloadImage()">下載圖片 (PNG)</button>
+            <button class="download-pdf" onclick="downloadPDF()">輸出 A4 雙拼 PDF</button>
         </div>
     </div>
 </div>
@@ -71,7 +79,7 @@
 const canvas = document.getElementById('scheduleCanvas');
 const ctx = canvas.getContext('2d');
 const inputs = [
-    'year', 'halfYear', 'startDate', 'workColor', 
+    'year', 'halfYear', 'staffId', 'startDate', 'workColor', 
     'weekdayTextColor', 'weekendTextColor', 
     'borderColor', 'titleText',
     'urgentDate', 'urgentCycle', 'urgentColor',
@@ -81,9 +89,22 @@ const inputs = [
 const CARD_W = 540;
 const CARD_H = 856;
 
+function setTheme(theme) {
+    const colors = {
+        default: { work: "#b8b8d8", urgent: "#dabed9", food: "#d61f5a" },
+        red: { work: "#feb2b2", urgent: "#fed7d7", food: "#c53030" },
+        green: { work: "#9ae6b4", urgent: "#c6f6d5", food: "#276749" },
+        blue: { work: "#90cdf4", urgent: "#bee3f8", food: "#2b6cb0" }
+    };
+    document.getElementById('workColor').value = colors[theme].work;
+    document.getElementById('urgentColor').value = colors[theme].urgent;
+    document.getElementById('foodTagColor').value = colors[theme].food;
+    saveAndDraw();
+}
+
 window.onload = () => {
     inputs.forEach(id => {
-        const savedValue = localStorage.getItem('jail_final_' + id);
+        const savedValue = localStorage.getItem('jail_v6_final_' + id);
         if (savedValue !== null) document.getElementById(id).value = savedValue;
         document.getElementById(id).addEventListener('input', () => { saveAndDraw(); });
     });
@@ -91,39 +112,40 @@ window.onload = () => {
 };
 
 function saveAndDraw() {
-    inputs.forEach(id => localStorage.setItem('jail_final_' + id, document.getElementById(id).value));
+    inputs.forEach(id => localStorage.setItem('jail_v6_final_' + id, document.getElementById(id).value));
     const tag = document.getElementById('saveStatus');
     tag.style.visibility = 'visible';
     setTimeout(() => { tag.style.visibility = 'hidden'; }, 1000);
     draw();
 }
 
-function draw() {
-    const dpr = 2; 
-    canvas.width = CARD_W * dpr;
-    canvas.height = CARD_H * dpr;
-    ctx.scale(dpr, dpr);
-    ctx.fillStyle = "white";
-    ctx.fillRect(0, 0, CARD_W, CARD_H);
-
-    const config = {};
-    inputs.forEach(id => config[id] = document.getElementById(id).value);
+function generateData(config, hYear) {
+    const dpr = 2;
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = CARD_W * dpr;
+    tempCanvas.height = CARD_H * dpr;
+    const tCtx = tempCanvas.getContext('2d');
+    tCtx.scale(dpr, dpr);
+    tCtx.fillStyle = "white";
+    tCtx.fillRect(0, 0, CARD_W, CARD_H);
 
     const adYear = parseInt(config.year) + 1911;
     const [sY, sM, sD] = config.startDate.split('-').map(Number);
     const cycleStart = new Date(sY, sM - 1, sD).getTime();
-    
     const [uY, uM, uD] = config.urgentDate.split('-').map(Number);
     const urgentStart = new Date(uY, uM - 1, uD).getTime();
     const uCycle = parseInt(config.urgentCycle) || 18;
 
-    // 標題 (顯示年份 + 標題)
-    ctx.fillStyle = config.weekdayTextColor;
-    ctx.font = "bold 26px Sans-Serif";
-    ctx.textAlign = "center";
-    ctx.fillText(`${config.year}年 ${config.titleText}`, CARD_W / 2, 45);
+    // 動態標題標註邏輯
+    const halfTag = hYear == "0" ? "(上半年)" : "(下半年)";
+    const fullTitle = `${config.year}年 ${config.titleText}${halfTag} \n  打卡編號:${config.staffId}`;
 
-    const months = config.halfYear == "0" ? [1, 2, 3, 4, 5, 6] : [7, 8, 9, 10, 11, 12];
+    tCtx.fillStyle = config.weekdayTextColor;
+    tCtx.font = "bold 22px Sans-Serif"; // 縮小一點以容納更長的文字
+    tCtx.textAlign = "center";
+    tCtx.fillText(fullTitle, CARD_W / 2, 45);
+
+    const months = hYear == "0" ? [1, 2, 3, 4, 5, 6] : [7, 8, 9, 10, 11, 12];
     const marginX = 15, marginY = 15;
     const mWidth = (CARD_W - marginX * 3) / 2;
     const mHeight = (CARD_H - 100) / 3.2;
@@ -133,27 +155,24 @@ function draw() {
         const y = 80 + Math.floor(i / 2) * (mHeight + marginY);
         const titleH = 22, cellW = mWidth / 7, cellH = (mHeight - titleH) / 7;
 
-        // 月份表頭
-        ctx.fillStyle = config.workColor;
-        ctx.globalAlpha = 0.6;
-        ctx.fillRect(x, y, mWidth, titleH);
-        ctx.globalAlpha = 1.0;
-        ctx.strokeStyle = config.borderColor;
-        ctx.lineWidth = 1.2;
-        ctx.strokeRect(x, y, mWidth, mHeight);
-        ctx.strokeRect(x, y, mWidth, titleH);
-        ctx.fillStyle = config.weekdayTextColor;
-        ctx.font = "bold 14px Sans-Serif";
-        ctx.fillText(`${month}月`, x + mWidth / 2, y + 16);
+        tCtx.fillStyle = config.workColor;
+        tCtx.globalAlpha = 0.6;
+        tCtx.fillRect(x, y, mWidth, titleH);
+        tCtx.globalAlpha = 1.0;
+        tCtx.strokeStyle = config.borderColor;
+        tCtx.lineWidth = 1.2;
+        tCtx.strokeRect(x, y, mWidth, mHeight);
+        tCtx.strokeRect(x, y, mWidth, titleH);
+        tCtx.fillStyle = config.weekdayTextColor;
+        tCtx.font = "bold 14px Sans-Serif";
+        tCtx.fillText(`${month}月`, x + mWidth / 2, y + 16);
 
-        // 星期列
-        const weeks = ['日','一','二','三','四','五','六'];
-        weeks.forEach((w, idx) => {
+        ['日','一','二','三','四','五','六'].forEach((w, idx) => {
             const tx = x + idx * cellW, ty = y + titleH;
-            ctx.strokeRect(tx, ty, cellW, cellH);
-            ctx.fillStyle = (idx === 0 || idx === 6) ? config.weekendTextColor : config.weekdayTextColor;
-            ctx.font = "bold 11px Sans-Serif";
-            ctx.fillText(w, tx + cellW / 2, ty + 16);
+            tCtx.strokeRect(tx, ty, cellW, cellH);
+            tCtx.fillStyle = (idx === 0 || idx === 6) ? config.weekendTextColor : config.weekdayTextColor;
+            tCtx.font = "bold 11px Sans-Serif";
+            tCtx.fillText(w, tx + cellW / 2, ty + 16);
         });
 
         const firstDay = new Date(adYear, month - 1, 1);
@@ -164,74 +183,96 @@ function draw() {
             const dx = x + curX * cellW, dy = y + titleH + (curY * cellH);
             const thisDate = new Date(adYear, month - 1, d).getTime();
             
-            // 1. 緊招色塊 (先畫，如果有上班色塊會疊在上面或被這覆蓋，依您需求緊招不衝突)
             const diffUrgent = Math.round((thisDate - urgentStart) / 86400000);
             if (((diffUrgent % uCycle) + uCycle) % uCycle === 0) {
-                ctx.fillStyle = config.urgentColor;
-                ctx.fillRect(dx + 0.8, dy + 0.8, cellW - 1.6, cellH - 1.6);
+                tCtx.fillStyle = config.urgentColor;
+                tCtx.fillRect(dx + 0.8, dy + 0.8, cellW - 1.6, cellH - 1.6);
             }
 
-            // 2. 上班日色塊
             const diffDays = Math.round((thisDate - cycleStart) / 86400000);
             if (((diffDays % 6) + 6) % 6 === 0 || ((diffDays % 6) + 6) % 6 === 2) {
-                ctx.fillStyle = config.workColor;
-                ctx.fillRect(dx + 0.8, dy + 0.8, cellW - 1.6, cellH - 1.6);
+                tCtx.fillStyle = config.workColor;
+                tCtx.fillRect(dx + 0.8, dy + 0.8, cellW - 1.6, cellH - 1.6);
             }
 
-            // 3. 飯單三角形標籤
             if (d == parseInt(config.foodOrderDay)) {
-                ctx.fillStyle = config.foodTagColor;
-                ctx.beginPath();
-                ctx.moveTo(dx + 1, dy + 1);
-                ctx.lineTo(dx + 12, dy + 1);
-                ctx.lineTo(dx + 1, dy + 12);
-                ctx.fill();
+                tCtx.fillStyle = config.foodTagColor;
+                tCtx.beginPath();
+                tCtx.moveTo(dx + 1, dy + 1);
+                tCtx.lineTo(dx + 12, dy + 1);
+                tCtx.lineTo(dx + 1, dy + 12);
+                tCtx.fill();
             }
 
-            ctx.strokeStyle = config.borderColor;
-            ctx.strokeRect(dx, dy, cellW, cellH);
-            ctx.fillStyle = (curX === 0 || curX === 6) ? config.weekendTextColor : config.weekdayTextColor;
-            ctx.font = "12px Arial";
-            ctx.fillText(d, dx + cellW / 2, dy + 16);
-
+            tCtx.strokeStyle = config.borderColor;
+            tCtx.strokeRect(dx, dy, cellW, cellH);
+            tCtx.fillStyle = (curX === 0 || curX === 6) ? config.weekendTextColor : config.weekdayTextColor;
+            tCtx.font = "12px Arial";
+            tCtx.fillText(d, dx + cellW / 2, dy + 16);
             curX++; if (curX > 6) { curX = 0; curY++; }
         }
     });
 
-    ctx.lineWidth = 2; ctx.strokeStyle = config.borderColor;
-    ctx.strokeRect(1, 1, CARD_W - 2, CARD_H - 2);
+    tCtx.lineWidth = 2; tCtx.strokeStyle = config.borderColor;
+    tCtx.strokeRect(1, 1, CARD_W - 2, CARD_H - 2);
+    return tempCanvas.toDataURL('image/png');
 }
 
-function getOutputName() {
+function draw() {
+    const config = {};
+    inputs.forEach(id => config[id] = document.getElementById(id).value);
+    const dataUrl = generateData(config, config.halfYear);
+    
+    const img = new Image();
+    img.onload = () => {
+        canvas.width = CARD_W * 2; canvas.height = CARD_H * 2;
+        ctx.drawImage(img, 0, 0, CARD_W * 2, CARD_H * 2);
+    };
+    img.src = dataUrl;
+}
+
+function getBaseName() {
     const year = document.getElementById('year').value;
-    const half = document.getElementById('halfYear').value == "0" ? "上半年" : "下半年";
+    const staffId = document.getElementById('staffId').value;
     const title = document.getElementById('titleText').value;
-    return `${year}年_${half}_${title}`;
+    return `${year}年_編號${staffId}_${title}`;
 }
 
 function downloadImage() {
     const link = document.createElement('a');
-    link.download = `${getOutputName()}.png`;
+    const half = document.getElementById('halfYear').value == "0" ? "上半年" : "下半年";
+    link.download = `${getBaseName()}_${half}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
 }
 
 async function downloadPDF() {
+    if (typeof window.jspdf === 'undefined') {
+        alert("離線錯誤：請確認 jspdf.umd.min.js 與本檔案在同資料夾。");
+        return;
+    }
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('p', 'mm', 'a4');
-    const imgData = canvas.toDataURL('image/png');
+    const config = {};
+    inputs.forEach(id => config[id] = document.getElementById(id).value);
+
+    const imgH1 = generateData(config, "0");
+    const imgH2 = generateData(config, "1");
+
     const cardW = 54.0, cardH = 85.6;
     const marginX = (210 - (cardW * 2)) / 3, marginY = 10;
 
-    for (let row = 0; row < 5; row++) {
-        for (let col = 0; col < 2; col++) {
-            const x = marginX + col * (cardW + marginX);
-            const y = marginY + row * (cardH + 5);
-            doc.addImage(imgData, 'PNG', x, y, cardW, cardH);
-            doc.setDrawColor(220); doc.setLineWidth(0.1); doc.rect(x, y, cardW, cardH);
-        }
+    for (let row = 0; row < 3; row++) {
+        const y = marginY + row * (cardH + 5);
+        doc.addImage(imgH1, 'PNG', marginX, y, cardW, cardH);
+        doc.setDrawColor(220); doc.setLineWidth(0.1); doc.rect(marginX, y, cardW, cardH);
+        
+        const x2 = marginX * 2 + cardW;
+        doc.addImage(imgH2, 'PNG', x2, y, cardW, cardH);
+        doc.rect(x2, y, cardW, cardH);
     }
-    doc.save(`${getOutputName()}.pdf`);
+    
+    doc.save(`${getBaseName()}_全年度雙拼.pdf`);
 }
 </script>
 </body>
