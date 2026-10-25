@@ -17,8 +17,8 @@
         canvas { background: white; box-shadow: 0 10px 15px rgba(0,0,0,0.2); border-radius: 4px; max-width: 100%; }
         .btn-group { display: flex; gap: 8px; margin-top: 15px; width: 100%; flex-wrap: wrap; }
         button { flex: 1; min-width: 100px; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.95rem; transition: 0.3s; font-weight: bold; }
-        .download-png { background: #718096; color: white; }
         .download-pdf { background: #2d3748; color: white; }
+        .download-pdf-next { background: #4a5568; color: white; }
         .theme-btn { padding: 6px 10px; font-size: 0.8rem; color: white; }
         .status-tag { font-size: 0.75rem; color: #48bb78; visibility: hidden; text-align: center; margin-top: 5px; }
         h3 { font-size: 1rem; margin: 15px 0 10px 0; border-left: 4px solid #4a5568; padding-left: 8px; color: #2d3748; }
@@ -69,8 +69,8 @@
     <div class="preview">
         <canvas id="scheduleCanvas"></canvas>
         <div class="btn-group">
-            <button class="download-png" onclick="downloadImage()">下載圖片 (PNG)</button>
-            <button class="download-pdf" onclick="downloadPDF()">輸出 A4 雙拼 PDF</button>
+            <button class="download-pdf" onclick="downloadPDF(0)">輸出本年度 A4 雙拼 PDF</button>
+            <button class="download-pdf-next" onclick="downloadPDF(1)">輸出次年度 A4 雙拼 PDF</button>
         </div>
     </div>
 </div>
@@ -231,22 +231,14 @@ function draw() {
     img.src = dataUrl;
 }
 
-function getBaseName() {
-    const year = document.getElementById('year').value;
+function getBaseName(targetYear) {
+    const year = targetYear !== undefined ? targetYear : document.getElementById('year').value;
     const staffId = document.getElementById('staffId').value;
     const title = document.getElementById('titleText').value;
     return `${year}年_編號${staffId}_${title}`;
 }
 
-function downloadImage() {
-    const link = document.createElement('a');
-    const half = document.getElementById('halfYear').value == "0" ? "上半年" : "下半年";
-    link.download = `${getBaseName()}_${half}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-}
-
-async function downloadPDF() {
+async function downloadPDF(yearOffset = 0) {
     if (typeof window.jspdf === 'undefined') {
         alert("離線錯誤：請確認 jspdf.umd.min.js 與本檔案在同資料夾。");
         return;
@@ -255,6 +247,10 @@ async function downloadPDF() {
     const doc = new jsPDF('p', 'mm', 'a4');
     const config = {};
     inputs.forEach(id => config[id] = document.getElementById(id).value);
+
+    // 根據偏移量計算目標民國年份 (0 = 本年度, 1 = 次年度)
+    const targetYear = (parseInt(config.year) + yearOffset).toString();
+    config.year = targetYear;
 
     const imgH1 = generateData(config, "0");
     const imgH2 = generateData(config, "1");
@@ -272,7 +268,7 @@ async function downloadPDF() {
         doc.rect(x2, y, cardW, cardH);
     }
     
-    doc.save(`${getBaseName()}_全年度雙拼.pdf`);
+    doc.save(`${getBaseName(targetYear)}_全年度雙拼.pdf`);
 }
 </script>
 </body>
