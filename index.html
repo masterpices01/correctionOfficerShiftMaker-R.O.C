@@ -20,6 +20,8 @@
         .download-pdf { background: #2d3748; color: white; }
         .download-pdf-next { background: #4a5568; color: white; }
         .theme-btn { padding: 6px 10px; font-size: 0.8rem; color: white; }
+        .reset-btn { width: 100%; margin-top: 10px; padding: 10px; background: #fff5f5; color: #c53030; border: 1px solid #feb2b2; font-size: 0.85rem; }
+        .reset-btn:hover { background: #fed7d7; }
         .status-tag { font-size: 0.75rem; color: #48bb78; visibility: hidden; text-align: center; margin-top: 5px; }
         h3 { font-size: 1rem; margin: 15px 0 10px 0; border-left: 4px solid #4a5568; padding-left: 8px; color: #2d3748; }
     </style>
@@ -63,6 +65,7 @@
         <input type="hidden" id="weekendTextColor" value="#e53e3e">
         <input type="hidden" id="borderColor" value="#000000">
 
+        <button class="reset-btn" onclick="resetDefaults()">🗑️ 清除暫存 / 恢復預設值</button>
         <div id="saveStatus" class="status-tag">✓ 設定已儲存</div>
     </div>
 
@@ -86,6 +89,24 @@ const inputs = [
     'foodOrderDay', 'foodTagColor'
 ];
 
+// 預設值字典，供清除暫存時完整還原
+const defaultValues = {
+    year: '115',
+    halfYear: '0',
+    staffId: '00001',
+    startDate: '2026-01-03',
+    urgentDate: '2026-02-06',
+    urgentCycle: '18',
+    foodOrderDay: '20',
+    titleText: '戒護科班表',
+    workColor: '#b8b8d8',
+    urgentColor: '#dabed9',
+    foodTagColor: '#d61f5a',
+    weekdayTextColor: '#2d3748',
+    weekendTextColor: '#e53e3e',
+    borderColor: '#000000'
+};
+
 const CARD_W = 540;
 const CARD_H = 856;
 
@@ -100,6 +121,32 @@ function setTheme(theme) {
     document.getElementById('urgentColor').value = colors[theme].urgent;
     document.getElementById('foodTagColor').value = colors[theme].food;
     saveAndDraw();
+}
+
+function resetDefaults() {
+    if (confirm("確定要清除所有儲存紀錄（Cookies / 本地暫存），並將各項數值恢復為預設值嗎？")) {
+        // 1. 清除 localStorage 項目
+        inputs.forEach(id => {
+            localStorage.removeItem('jail_v6_final_' + id);
+            if (defaultValues[id] !== undefined) {
+                document.getElementById(id).value = defaultValues[id];
+            }
+        });
+        // 2. 清除瀏覽器 Cookies (若有的話)
+        document.cookie.split(";").forEach(c => {
+            document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+        });
+
+        const tag = document.getElementById('saveStatus');
+        tag.textContent = '✓ 已恢復預設值';
+        tag.style.visibility = 'visible';
+        setTimeout(() => {
+            tag.style.visibility = 'hidden';
+            tag.textContent = '✓ 設定已儲存';
+        }, 1200);
+
+        draw();
+    }
 }
 
 window.onload = () => {
@@ -119,6 +166,60 @@ function saveAndDraw() {
     draw();
 }
 
+// 智慧標題繪製：自動判斷單行/雙行換行、自動縮小字體與最大寬度壓縮
+function drawSmartHeader(tCtx, config, hYear) {
+    const halfTag = hYear == "0" ? "(上半年)" : "(下半年)";
+    const mainTitle = `${config.year}年 ${config.titleText}${halfTag}`;
+    const subTitle = config.staffId ? `打卡編號:${config.staffId}` : "";
+    const singleLineText = subTitle ? `${mainTitle}  ${subTitle}` : mainTitle;
+
+    const maxWidth = CARD_W - 30; // 左右各留 15px 邊距 (總可用寬度 510px)
+    tCtx.fillStyle = config.weekdayTextColor;
+    tCtx.textAlign = "center";
+    tCtx.textBaseline = "middle";
+
+    // 先測試單行是否能以較大字體 (22px ~ 18px) 塞入
+    let fontSize = 22;
+    tCtx.font = `bold ${fontSize}px "Microsoft JhengHei", Sans-Serif`;
+    
+    if (tCtx.measureText(singleLineText).width <= maxWidth) {
+        tCtx.fillText(singleLineText, CARD_W / 2, 42, maxWidth);
+    } else {
+        // 嘗試微幅縮小單行字體到 18px
+        while (fontSize > 18 && tCtx.measureText(singleLineText).width > maxWidth) {
+            fontSize--;
+            tCtx.font = `bold ${fontSize}px "Microsoft JhengHei", Sans-Serif`;
+        }
+        
+        if (tCtx.measureText(singleLineText).width <= maxWidth) {
+            tCtx.fillText(singleLineText, CARD_W / 2, 42, maxWidth);
+        } else {
+            // 若單行在 18px 下依然太長，自動切換為「上下雙行縮排」模式，並各自獨立自動縮放字體
+            let font1 = 20;
+            tCtx.font = `bold ${font1}px "Microsoft JhengHei", Sans-Serif`;
+            while (font1 > 10 && tCtx.measureText(mainTitle).width > maxWidth) {
+                font1--;
+                tCtx.font = `bold ${font1}px "Microsoft JhengHei", Sans-Serif`;
+            }
+            // 第 4 個參數 maxWidth 確保就算字體縮到 10px 仍超長時，Canvas 也會強制水平壓縮不超出邊界
+            tCtx.fillText(mainTitle, CARD_W / 2, subTitle ? 28 : 42, maxWidth);
+
+            if (subTitle) {
+                let font2 = 16;
+                tCtx.font = `bold ${font2}px "Microsoft JhengHei", Sans-Serif`;
+                while (font2 > 10 && tCtx.measureText(subTitle).width > maxWidth) {
+                    font2--;
+                    tCtx.font = `bold ${font2}px "Microsoft JhengHei", Sans-Serif`;
+                }
+                tCtx.fillText(subTitle, CARD_W / 2, 56, maxWidth);
+            }
+        }
+    }
+    
+    // 繪製完標題後恢復預設 baseline，避免影響下方月曆繪製
+    tCtx.textBaseline = "alphabetic";
+}
+
 function generateData(config, hYear) {
     const dpr = 2;
     const tempCanvas = document.createElement('canvas');
@@ -136,14 +237,8 @@ function generateData(config, hYear) {
     const urgentStart = new Date(uY, uM - 1, uD).getTime();
     const uCycle = parseInt(config.urgentCycle) || 18;
 
-    // 動態標題標註邏輯
-    const halfTag = hYear == "0" ? "(上半年)" : "(下半年)";
-    const fullTitle = `${config.year}年 ${config.titleText}${halfTag} \n  打卡編號:${config.staffId}`;
-
-    tCtx.fillStyle = config.weekdayTextColor;
-    tCtx.font = "bold 22px Sans-Serif"; // 縮小一點以容納更長的文字
-    tCtx.textAlign = "center";
-    tCtx.fillText(fullTitle, CARD_W / 2, 45);
+    // 呼叫智慧自適應標題繪製函式
+    drawSmartHeader(tCtx, config, hYear);
 
     const months = hYear == "0" ? [1, 2, 3, 4, 5, 6] : [7, 8, 9, 10, 11, 12];
     const marginX = 15, marginY = 15;
