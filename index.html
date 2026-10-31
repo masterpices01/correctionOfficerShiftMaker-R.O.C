@@ -3,35 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>戒護班表系統 - 打卡編號增強版</title>
+    <title>戒護班表系統 - 條列設定槽與保證休假版</title>
     <script src="jspdf.umd.min.js"></script>
     <style>
-        :root { --primary: #2d3748; --bg: #f7fafc; }
-        body { font-family: "Microsoft JhengHei", Arial, sans-serif; background: var(--bg); display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        .container { display: flex; gap: 20px; max-width: 1300px; width: 100%; }
-        .controls { flex: 1; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: sticky; top: 10px; height: fit-content; max-height: 95vh; overflow-y: auto; }
+        :root { --primary: #2d3748; --bg: #f7fafc; --accent: #3182ce; }
+        body { font-family: "Microsoft JhengHei", Arial, sans-serif; background: var(--bg); display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
+        .container { display: flex; gap: 20px; max-width: 1350px; width: 100%; align-items: flex-start; }
+        .controls { flex: 1; min-width: 350px; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: sticky; top: 10px; max-height: 95vh; overflow-y: auto; }
         .field { margin-bottom: 12px; }
         label { display: block; margin-bottom: 4px; font-weight: bold; color: #4a5568; font-size: 0.85rem; }
-        input, select { width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box; }
+        input, select { width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box; font-family: inherit; font-size: 0.9rem; }
+        input[readonly] { background-color: #edf2f7; color: #718096; cursor: not-allowed; font-weight: bold; }
         .preview { flex: 1.5; display: flex; flex-direction: column; align-items: center; }
         canvas { background: white; box-shadow: 0 10px 15px rgba(0,0,0,0.2); border-radius: 4px; max-width: 100%; }
         .btn-group { display: flex; gap: 8px; margin-top: 15px; width: 100%; flex-wrap: wrap; }
-        button { flex: 1; min-width: 100px; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.95rem; transition: 0.3s; font-weight: bold; }
+        button { flex: 1; min-width: 90px; padding: 10px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9rem; transition: 0.2s; font-weight: bold; font-family: inherit; }
         .download-pdf { background: #2d3748; color: white; }
         .download-pdf-next { background: #4a5568; color: white; }
-        .theme-btn { padding: 6px 10px; font-size: 0.8rem; color: white; }
+        .theme-btn { padding: 6px 10px; font-size: 0.8rem; color: white; min-width: 65px; }
         .reset-btn { width: 100%; margin-top: 10px; padding: 10px; background: #fff5f5; color: #c53030; border: 1px solid #feb2b2; font-size: 0.85rem; }
         .reset-btn:hover { background: #fed7d7; }
-        .status-tag { font-size: 0.75rem; color: #48bb78; visibility: hidden; text-align: center; margin-top: 5px; }
-        h3 { font-size: 1rem; margin: 15px 0 10px 0; border-left: 4px solid #4a5568; padding-left: 8px; color: #2d3748; }
+        .status-tag { font-size: 0.75rem; color: #48bb78; visibility: hidden; text-align: center; margin-top: 5px; font-weight: bold; }
+        h3 { font-size: 0.95rem; margin: 16px 0 10px 0; border-left: 4px solid #4a5568; padding-left: 8px; color: #2d3748; }
+        
+        /* 條列式 9 個設定檔案槽樣式 (完整顯示名稱) */
+        .slot-list { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+        .slot-btn { display: flex; align-items: center; width: 100%; text-align: left; padding: 7px 10px; font-size: 0.85rem; background: #f7fafc; color: #2d3748; border: 1px solid #e2e8f0; border-radius: 6px; word-break: break-all; white-space: normal; line-height: 1.35; }
+        .slot-btn:hover { background: #edf2f7; }
+        .slot-btn.active { background: #ebf8ff; border: 2px solid var(--accent); color: #2b6cb0; box-shadow: 0 1px 3px rgba(49,130,206,0.2); }
+        .slot-badge { display: inline-block; background: #cbd5e0; color: #2d3748; font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; margin-right: 8px; flex-shrink: 0; font-family: monospace; font-weight: bold; }
+        .slot-btn.active .slot-badge { background: var(--accent); color: white; }
+        .slot-name-text { flex: 1; word-break: break-word; }
+
+        /* JSON 工具按鈕 */
+        .json-btn { background: #edf2f7; color: #2d3748; border: 1px solid #cbd5e0; font-size: 0.82rem; padding: 8px; }
+        .json-btn:hover { background: #e2e8f0; }
+        .legend-box { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: #2d3748; background: #f7fafc; padding: 6px 10px; border-radius: 4px; margin-bottom: 12px; border: 1px solid #cbd5e0; }
+        .legend-rect { width: 22px; height: 6px; background: #656577; border-radius: 1px; display: inline-block; flex-shrink: 0; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="controls">
-        <h2 style="font-size: 1.2rem; margin-top: 0;">戒護班表與飯單系統</h2>
+        <h2 style="font-size: 1.2rem; margin-top: 0; margin-bottom: 12px;">戒護班表與飯單系統</h2>
         
+        <h3>設定檔案槽 (條列式切換比對)</h3>
+        <div class="slot-list" id="slotList"></div>
+        <div class="field">
+            <label>當前設定檔名稱 (同步顯示於標題與檔名)</label>
+            <input type="text" id="slotName" placeholder="輸入設定檔名稱..." oninput="updateSlotName(this.value)">
+        </div>
+        <div class="btn-group" style="margin-top: 8px; margin-bottom: 12px;">
+            <button class="json-btn" onclick="exportJSON(false)">💾 匯出此槽 JSON</button>
+            <button class="json-btn" onclick="exportJSON(true)">📦 匯出全部 9 槽</button>
+            <button class="json-btn" onclick="document.getElementById('jsonFileInput').click()">📂 讀取 JSON</button>
+            <input type="file" id="jsonFileInput" accept=".json" style="display: none;" onchange="importJSON(event)">
+        </div>
+
+        <h3>基本資料設定</h3>
         <div class="field"><label>民國年份</label><input type="number" id="year" value="115"></div>
         <div class="field">
             <label>顯示半年度</label>
@@ -41,32 +71,42 @@
             </select>
         </div>
         <div class="field"><label>打卡編號</label><input type="text" id="staffId" value="00001"></div>
-        <div class="field"><label>第一天上班日</label><input type="date" id="startDate" value="2026-01-03"></div>
+        <div class="field">
+            <label>第一天上班日 (YYYY/MM/DD)</label>
+            <input type="text" id="startDate" value="2026/01/03" placeholder="YYYY/MM/DD" maxlength="10" oninput="handleDateInput(this)" onblur="normalizeDateField(this)">
+        </div>
 
         <h3>核心排程設定</h3>
-        <div class="field"><label>緊招起始日</label><input type="date" id="urgentDate" value="2026-02-06"></div>
-        <div class="field"><label>緊招週期 (天)</label><input type="number" id="urgentCycle" value="18"></div>
+        <div class="field">
+            <label>緊招起始日 (YYYY/MM/DD)</label>
+            <input type="text" id="urgentDate" value="2026/02/06" placeholder="YYYY/MM/DD" maxlength="10" oninput="handleDateInput(this)" onblur="normalizeDateField(this)">
+        </div>
+        <div class="field"><label>緊招週期 (天) [固定值]</label><input type="number" id="urgentCycle" value="18" readonly></div>
+        <div class="legend-box" id="legendBox">
+            <span class="legend-rect" id="legendRect"></span>
+            <span>週期第 6、12 天頂部標示記號（保證休假）</span>
+        </div>
         <div class="field"><label>每月交單日期 (1-31)</label><input type="number" id="foodOrderDay" value="20"></div>
 
         <h3>視覺主題</h3>
-        <div class="btn-group" style="margin-bottom: 15px;">
+        <div class="btn-group" style="margin-bottom: 15px; margin-top: 5px;">
             <button class="theme-btn" style="background: #2d3748;" onclick="setTheme('default')">預設藍紫</button>
             <button class="theme-btn" style="background: #e53e3e;" onclick="setTheme('red')">熱情紅</button>
             <button class="theme-btn" style="background: #38a169;" onclick="setTheme('green')">森林綠</button>
             <button class="theme-btn" style="background: #3182ce;" onclick="setTheme('blue')">商務藍</button>
         </div>
 
-        <div class="field"><label>標題文字</label><input type="text" id="titleText" value="戒護科班表"></div>
+        <div class="field"><label>標題文字</label><input type="text" id="titleText" value="" placeholder="選填標題文字..."></div>
         <div class="field"><label>上班日顏色</label><input type="color" id="workColor" value="#b8b8d8"></div>
         <div class="field"><label>緊招色塊顏色</label><input type="color" id="urgentColor" value="#dabed9"></div>
-        <div class="field"><label>飯單標籤顏色</label><input type="color" id="foodTagColor" value="#d61f5a"></div>
+        <div class="field"><label>飯單與休假標註顏色 (依上班日顏色自動加深)</label><input type="color" id="foodTagColor" value="#656577"></div>
 
         <input type="hidden" id="weekdayTextColor" value="#2d3748">
         <input type="hidden" id="weekendTextColor" value="#e53e3e">
         <input type="hidden" id="borderColor" value="#000000">
 
-        <button class="reset-btn" onclick="resetDefaults()">🗑️ 清除暫存 / 恢復預設值</button>
-        <div id="saveStatus" class="status-tag">✓ 設定已儲存</div>
+        <button class="reset-btn" onclick="resetDefaults()">🗑️ 恢復當前設定槽為預設值</button>
+        <div id="saveStatus" class="status-tag">✓ 設定已自動儲存</div>
     </div>
 
     <div class="preview">
@@ -89,103 +129,411 @@ const inputs = [
     'foodOrderDay', 'foodTagColor'
 ];
 
-// 預設值字典，供清除暫存時完整還原
+// 預設槽位代碼名稱
+const DEFAULT_SLOT_NAMES = ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2', 'C3'];
+
+// 根據 HEX 顏色計算加深後的顏色 (factor 介於 0~1，越小越深)
+function darkenHexColor(hex, factor = 0.55) {
+    const cleanHex = String(hex || '#b8b8d8').replace('#', '');
+    if (cleanHex.length !== 6) return '#555566';
+    const r = Math.max(0, Math.min(255, Math.round(parseInt(cleanHex.substring(0, 2), 16) * factor)));
+    const g = Math.max(0, Math.min(255, Math.round(parseInt(cleanHex.substring(2, 4), 16) * factor)));
+    const b = Math.max(0, Math.min(255, Math.round(parseInt(cleanHex.substring(4, 6), 16) * factor)));
+    return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
+}
+
+// 預設值字典 (titleText 預設為 null，foodTagColor 由 workColor 加深產生)
 const defaultValues = {
     year: '115',
     halfYear: '0',
     staffId: '00001',
-    startDate: '2026-01-03',
-    urgentDate: '2026-02-06',
+    startDate: '2026/01/03',
+    urgentDate: '2026/02/06',
     urgentCycle: '18',
     foodOrderDay: '20',
-    titleText: '戒護科班表',
+    titleText: null,
     workColor: '#b8b8d8',
     urgentColor: '#dabed9',
-    foodTagColor: '#d61f5a',
+    foodTagColor: darkenHexColor('#b8b8d8', 0.55),
     weekdayTextColor: '#2d3748',
     weekendTextColor: '#e53e3e',
     borderColor: '#000000'
 };
 
+const STORAGE_KEY_PROFILES = 'jail_v9_profiles';
+const STORAGE_KEY_ACTIVE = 'jail_v9_active_slot';
+const TOTAL_SLOTS = 9;
+
+let currentSlot = 0;
+let profiles = [];
+
 const CARD_W = 540;
 const CARD_H = 856;
 
+// 同步更新 legend-rect 與 foodTagColor 顏色
+function syncDerivedColors(fromWorkColorChange = false) {
+    const workHex = document.getElementById('workColor').value || defaultValues.workColor;
+    const darkened = darkenHexColor(workHex, 0.55);
+    if (fromWorkColorChange || !document.getElementById('foodTagColor').value) {
+        document.getElementById('foodTagColor').value = darkened;
+    }
+    const activeTagColor = document.getElementById('foodTagColor').value || darkened;
+    const legendRect = document.getElementById('legendRect');
+    if (legendRect) {
+        legendRect.style.backgroundColor = activeTagColor;
+    }
+    const legendBox = document.getElementById('legendBox');
+    if (legendBox) {
+        legendBox.style.borderColor = workHex;
+        legendBox.style.color = activeTagColor;
+    }
+}
+
+// 將舊有的 YYYY-MM-DD 轉為 YYYY/MM/DD
+function toSlashDate(str) {
+    if (!str) return '';
+    return String(str).trim().replace(/-/g, '/');
+}
+
+// 處理日期欄位輸入：當使用者輸入純數字時自動加上斜線 (YYYY/MM/DD)
+function handleDateInput(el) {
+    let raw = el.value.replace(/[^\d/]/g, '');
+    if (!raw.includes('/') && raw.length > 4) {
+        if (raw.length <= 6) {
+            raw = raw.slice(0, 4) + '/' + raw.slice(4);
+        } else {
+            raw = raw.slice(0, 4) + '/' + raw.slice(4, 6) + '/' + raw.slice(6, 8);
+        }
+    }
+    if (el.value !== raw) {
+        el.value = raw;
+    }
+}
+
+// 當離開日期輸入框時，自動補零標準化為 YYYY/MM/DD
+function normalizeDateField(el) {
+    const val = toSlashDate(el.value);
+    const parts = val.split('/');
+    if (parts.length === 3) {
+        const y = parts[0].padStart(4, '0');
+        const m = parts[1].padStart(2, '0');
+        const d = parts[2].padStart(2, '0');
+        if (y.length === 4 && Number(m) >= 1 && Number(m) <= 12 && Number(d) >= 1 && Number(d) <= 31) {
+            el.value = `${y}/${m}/${d}`;
+            saveAndDraw();
+        }
+    }
+}
+
+// 解析 YYYY/MM/DD 或 YYYY-MM-DD 字串為 [Y, M, D]
+function parseDateParts(dateStr, fallbackStr) {
+    const clean = toSlashDate(dateStr);
+    const parts = clean.split('/').map(Number);
+    if (parts.length === 3 && parts[0] > 1900 && parts[1] >= 1 && parts[1] <= 12 && parts[2] >= 1 && parts[2] <= 31) {
+        return parts;
+    }
+    return toSlashDate(fallbackStr).split('/').map(Number);
+}
+
+// 初始化 9 個設定檔槽位 (A1 ~ C3)
+function initProfiles() {
+    const savedActive = localStorage.getItem(STORAGE_KEY_ACTIVE) ?? localStorage.getItem('jail_v8_active_slot');
+    if (savedActive !== null) {
+        currentSlot = parseInt(savedActive, 10) || 0;
+    }
+
+    const savedProfiles = localStorage.getItem(STORAGE_KEY_PROFILES) ?? localStorage.getItem('jail_v8_profiles');
+    if (savedProfiles) {
+        try {
+            const parsed = JSON.parse(savedProfiles);
+            if (Array.isArray(parsed) && parsed.length === TOTAL_SLOTS) {
+                profiles = parsed.map((p, idx) => {
+                    let pName = p.name;
+                    if (!pName || /^設定檔\s*\d+$/.test(pName)) {
+                        pName = DEFAULT_SLOT_NAMES[idx];
+                    }
+                    const rawData = p.data || {};
+                    const workHex = rawData.workColor || defaultValues.workColor;
+                    // 若為舊版預設標題「戒護科班表」，轉換為 null
+                    const normalizedTitle = (rawData.titleText === '戒護科班表' || rawData.titleText === '') ? null : (rawData.titleText ?? null);
+                    // 若為舊版固定紅/藍標籤色，更新為根據 workColor 加深
+                    const isOldFixedFoodColor = ['#d61f5a', '#c53030', '#276749', '#2b6cb0'].includes((rawData.foodTagColor || '').toLowerCase());
+                    const derivedFoodColor = isOldFixedFoodColor ? darkenHexColor(workHex, 0.55) : (rawData.foodTagColor || darkenHexColor(workHex, 0.55));
+
+                    const mergedData = {
+                        ...defaultValues,
+                        ...rawData,
+                        titleText: normalizedTitle,
+                        foodTagColor: derivedFoodColor,
+                        urgentCycle: '18'
+                    };
+                    mergedData.startDate = toSlashDate(mergedData.startDate);
+                    mergedData.urgentDate = toSlashDate(mergedData.urgentDate);
+                    return {
+                        name: pName,
+                        data: mergedData
+                    };
+                });
+                saveProfilesToStorage();
+                return;
+            }
+        } catch (e) {
+            console.error("讀取設定檔失敗，將使用預設值", e);
+        }
+    }
+
+    profiles = Array.from({ length: TOTAL_SLOTS }, (_, idx) => ({
+        name: DEFAULT_SLOT_NAMES[idx],
+        data: { ...defaultValues }
+    }));
+    saveProfilesToStorage();
+}
+
+function saveProfilesToStorage() {
+    localStorage.setItem(STORAGE_KEY_PROFILES, JSON.stringify(profiles));
+    localStorage.setItem(STORAGE_KEY_ACTIVE, currentSlot.toString());
+}
+
+function renderSlotButtons() {
+    const list = document.getElementById('slotList');
+    list.innerHTML = '';
+    profiles.forEach((profile, index) => {
+        const slotCode = DEFAULT_SLOT_NAMES[index];
+        const btn = document.createElement('button');
+        btn.className = 'slot-btn' + (index === currentSlot ? ' active' : '');
+        
+        const badge = document.createElement('span');
+        badge.className = 'slot-badge';
+        badge.textContent = slotCode;
+
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'slot-name-text';
+        nameSpan.textContent = profile.name;
+
+        btn.appendChild(badge);
+        btn.appendChild(nameSpan);
+        btn.onclick = () => switchSlot(index);
+        list.appendChild(btn);
+    });
+}
+
+function switchSlot(index) {
+    currentSlot = index;
+    localStorage.setItem(STORAGE_KEY_ACTIVE, currentSlot.toString());
+    loadCurrentSlotToUI();
+    renderSlotButtons();
+    draw();
+}
+
+function loadCurrentSlotToUI() {
+    const currentProfile = profiles[currentSlot];
+    document.getElementById('slotName').value = currentProfile.name;
+    inputs.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            let val = id === 'urgentCycle' ? '18' : (currentProfile.data[id] !== undefined ? currentProfile.data[id] : defaultValues[id]);
+            if (id === 'titleText') {
+                val = val === null ? '' : val;
+            }
+            if (id === 'startDate' || id === 'urgentDate') {
+                val = toSlashDate(val);
+            }
+            el.value = val;
+        }
+    });
+    syncDerivedColors(false);
+}
+
+function updateSlotName(newName) {
+    profiles[currentSlot].name = newName.trim() || DEFAULT_SLOT_NAMES[currentSlot];
+    saveProfilesToStorage();
+    renderSlotButtons();
+    showSaveStatus('✓ 名稱已儲存');
+    draw();
+}
+
+function showSaveStatus(msg = '✓ 設定已自動儲存') {
+    const tag = document.getElementById('saveStatus');
+    tag.textContent = msg;
+    tag.style.visibility = 'visible';
+    clearTimeout(window._saveTimer);
+    window._saveTimer = setTimeout(() => { tag.style.visibility = 'hidden'; }, 1000);
+}
+
 function setTheme(theme) {
     const colors = {
-        default: { work: "#b8b8d8", urgent: "#dabed9", food: "#d61f5a" },
-        red: { work: "#feb2b2", urgent: "#fed7d7", food: "#c53030" },
-        green: { work: "#9ae6b4", urgent: "#c6f6d5", food: "#276749" },
-        blue: { work: "#90cdf4", urgent: "#bee3f8", food: "#2b6cb0" }
+        default: { work: "#b8b8d8", urgent: "#dabed9" },
+        red: { work: "#feb2b2", urgent: "#fed7d7" },
+        green: { work: "#9ae6b4", urgent: "#c6f6d5" },
+        blue: { work: "#90cdf4", urgent: "#bee3f8" }
     };
-    document.getElementById('workColor').value = colors[theme].work;
+    const workHex = colors[theme].work;
+    document.getElementById('workColor').value = workHex;
     document.getElementById('urgentColor').value = colors[theme].urgent;
-    document.getElementById('foodTagColor').value = colors[theme].food;
+    document.getElementById('foodTagColor').value = darkenHexColor(workHex, 0.55);
+    syncDerivedColors(false);
     saveAndDraw();
 }
 
 function resetDefaults() {
-    if (confirm("確定要清除所有儲存紀錄（Cookies / 本地暫存），並將各項數值恢復為預設值嗎？")) {
-        // 1. 清除 localStorage 項目
-        inputs.forEach(id => {
-            localStorage.removeItem('jail_v6_final_' + id);
-            if (defaultValues[id] !== undefined) {
-                document.getElementById(id).value = defaultValues[id];
-            }
-        });
-        // 2. 清除瀏覽器 Cookies (若有的話)
-        document.cookie.split(";").forEach(c => {
-            document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-        });
-
-        const tag = document.getElementById('saveStatus');
-        tag.textContent = '✓ 已恢復預設值';
-        tag.style.visibility = 'visible';
-        setTimeout(() => {
-            tag.style.visibility = 'hidden';
-            tag.textContent = '✓ 設定已儲存';
-        }, 1200);
-
+    const slotCode = DEFAULT_SLOT_NAMES[currentSlot];
+    if (confirm(`確定要將槽位 ${slotCode}（「${profiles[currentSlot].name}」）恢復為預設值嗎？`)) {
+        profiles[currentSlot].data = { ...defaultValues, urgentCycle: '18' };
+        profiles[currentSlot].name = slotCode;
+        saveProfilesToStorage();
+        loadCurrentSlotToUI();
+        renderSlotButtons();
+        showSaveStatus('✓ 已恢復預設值');
         draw();
     }
 }
 
+// 匯出 JSON
+function exportJSON(exportAll = false) {
+    let payload, filename;
+    if (exportAll) {
+        payload = {
+            type: 'jail_schedule_all_profiles',
+            activeSlot: currentSlot,
+            profiles: profiles
+        };
+        filename = `戒護班表_全部9組設定檔_A1-C3.json`;
+    } else {
+        const currentProfile = profiles[currentSlot];
+        payload = {
+            type: 'jail_schedule_single_profile',
+            name: currentProfile.name,
+            data: currentProfile.data
+        };
+        filename = `${getBaseName()}_設定檔.json`;
+    }
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+// 讀取 JSON 檔案並自動填入設定
+function importJSON(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const imported = JSON.parse(e.target.result);
+            const normalizeProfileData = (raw = {}) => {
+                const workHex = raw.workColor || defaultValues.workColor;
+                const merged = {
+                    ...defaultValues,
+                    ...raw,
+                    titleText: (raw.titleText === undefined || raw.titleText === '') ? null : raw.titleText,
+                    foodTagColor: raw.foodTagColor || darkenHexColor(workHex, 0.55),
+                    urgentCycle: '18'
+                };
+                merged.startDate = toSlashDate(merged.startDate);
+                merged.urgentDate = toSlashDate(merged.urgentDate);
+                return merged;
+            };
+
+            if (imported.type === 'jail_schedule_all_profiles' && Array.isArray(imported.profiles)) {
+                profiles = imported.profiles.slice(0, TOTAL_SLOTS).map((p, idx) => ({
+                    name: p.name || DEFAULT_SLOT_NAMES[idx],
+                    data: normalizeProfileData(p.data)
+                }));
+                while (profiles.length < TOTAL_SLOTS) {
+                    const idx = profiles.length;
+                    profiles.push({ name: DEFAULT_SLOT_NAMES[idx], data: { ...defaultValues } });
+                }
+                if (typeof imported.activeSlot === 'number' && imported.activeSlot >= 0 && imported.activeSlot < TOTAL_SLOTS) {
+                    currentSlot = imported.activeSlot;
+                }
+                showSaveStatus('✓ 已載入全部 9 組設定檔');
+            } else if (imported.type === 'jail_schedule_single_profile' && imported.data) {
+                profiles[currentSlot] = {
+                    name: imported.name || profiles[currentSlot].name,
+                    data: normalizeProfileData(imported.data)
+                };
+                showSaveStatus('✓ 已載入設定至當前槽位');
+            } else if (typeof imported === 'object' && imported !== null) {
+                profiles[currentSlot].data = normalizeProfileData(imported);
+                showSaveStatus('✓ 已載入設定至當前槽位');
+            } else {
+                alert('JSON 檔案格式不符！');
+                return;
+            }
+            saveProfilesToStorage();
+            loadCurrentSlotToUI();
+            renderSlotButtons();
+            draw();
+        } catch (err) {
+            alert('讀取失敗：請確認檔案是否為有效的 JSON 格式。');
+        }
+        event.target.value = '';
+    };
+    reader.readAsText(file);
+}
+
 window.onload = () => {
+    initProfiles();
+    renderSlotButtons();
+    loadCurrentSlotToUI();
+
     inputs.forEach(id => {
-        const savedValue = localStorage.getItem('jail_v6_final_' + id);
-        if (savedValue !== null) document.getElementById(id).value = savedValue;
-        document.getElementById(id).addEventListener('input', () => { saveAndDraw(); });
+        document.getElementById(id).addEventListener('input', () => {
+            if (id === 'workColor') {
+                syncDerivedColors(true);
+            } else if (id === 'foodTagColor') {
+                syncDerivedColors(false);
+            }
+            saveAndDraw();
+        });
     });
     draw();
 };
 
 function saveAndDraw() {
-    inputs.forEach(id => localStorage.setItem('jail_v6_final_' + id, document.getElementById(id).value));
-    const tag = document.getElementById('saveStatus');
-    tag.style.visibility = 'visible';
-    setTimeout(() => { tag.style.visibility = 'hidden'; }, 1000);
+    document.getElementById('urgentCycle').value = '18';
+    const currentData = {};
+    inputs.forEach(id => {
+        const rawVal = document.getElementById(id).value;
+        currentData[id] = (id === 'titleText' && rawVal.trim() === '') ? null : rawVal;
+    });
+    currentData.urgentCycle = '18';
+    currentData.startDate = toSlashDate(currentData.startDate);
+    currentData.urgentDate = toSlashDate(currentData.urgentDate);
+    profiles[currentSlot].data = currentData;
+    saveProfilesToStorage();
+    showSaveStatus();
     draw();
 }
 
-// 智慧標題繪製：自動判斷單行/雙行換行、自動縮小字體與最大寬度壓縮
+// 智慧標題繪製：半年度縮寫為 (上)/(下)，當 titleText 為 null 時自動省略
 function drawSmartHeader(tCtx, config, hYear) {
-    const halfTag = hYear == "0" ? "(上半年)" : "(下半年)";
-    const mainTitle = `${config.year}年 ${config.titleText}${halfTag}`;
+    const halfTag = hYear == "0" ? "(上)" : "(下)";
+    const titlePart = config.titleText ? ` ${config.titleText}` : "";
+    const profileTag = config.profileName ? ` [${config.profileName}]` : "";
+    const mainTitle = `${config.year}年${titlePart}${profileTag}${halfTag}`;
     const subTitle = config.staffId ? `打卡編號:${config.staffId}` : "";
     const singleLineText = subTitle ? `${mainTitle}  ${subTitle}` : mainTitle;
 
-    const maxWidth = CARD_W - 30; // 左右各留 15px 邊距 (總可用寬度 510px)
+    const maxWidth = CARD_W - 30;
     tCtx.fillStyle = config.weekdayTextColor;
     tCtx.textAlign = "center";
     tCtx.textBaseline = "middle";
 
-    // 先測試單行是否能以較大字體 (22px ~ 18px) 塞入
     let fontSize = 22;
     tCtx.font = `bold ${fontSize}px "Microsoft JhengHei", Sans-Serif`;
     
     if (tCtx.measureText(singleLineText).width <= maxWidth) {
         tCtx.fillText(singleLineText, CARD_W / 2, 42, maxWidth);
     } else {
-        // 嘗試微幅縮小單行字體到 18px
         while (fontSize > 18 && tCtx.measureText(singleLineText).width > maxWidth) {
             fontSize--;
             tCtx.font = `bold ${fontSize}px "Microsoft JhengHei", Sans-Serif`;
@@ -194,14 +542,12 @@ function drawSmartHeader(tCtx, config, hYear) {
         if (tCtx.measureText(singleLineText).width <= maxWidth) {
             tCtx.fillText(singleLineText, CARD_W / 2, 42, maxWidth);
         } else {
-            // 若單行在 18px 下依然太長，自動切換為「上下雙行縮排」模式，並各自獨立自動縮放字體
             let font1 = 20;
             tCtx.font = `bold ${font1}px "Microsoft JhengHei", Sans-Serif`;
             while (font1 > 10 && tCtx.measureText(mainTitle).width > maxWidth) {
                 font1--;
                 tCtx.font = `bold ${font1}px "Microsoft JhengHei", Sans-Serif`;
             }
-            // 第 4 個參數 maxWidth 確保就算字體縮到 10px 仍超長時，Canvas 也會強制水平壓縮不超出邊界
             tCtx.fillText(mainTitle, CARD_W / 2, subTitle ? 28 : 42, maxWidth);
 
             if (subTitle) {
@@ -216,7 +562,6 @@ function drawSmartHeader(tCtx, config, hYear) {
         }
     }
     
-    // 繪製完標題後恢復預設 baseline，避免影響下方月曆繪製
     tCtx.textBaseline = "alphabetic";
 }
 
@@ -231,13 +576,15 @@ function generateData(config, hYear) {
     tCtx.fillRect(0, 0, CARD_W, CARD_H);
 
     const adYear = parseInt(config.year) + 1911;
-    const [sY, sM, sD] = config.startDate.split('-').map(Number);
+    const [sY, sM, sD] = parseDateParts(config.startDate, defaultValues.startDate);
     const cycleStart = new Date(sY, sM - 1, sD).getTime();
-    const [uY, uM, uD] = config.urgentDate.split('-').map(Number);
+    const [uY, uM, uD] = parseDateParts(config.urgentDate, defaultValues.urgentDate);
     const urgentStart = new Date(uY, uM - 1, uD).getTime();
-    const uCycle = parseInt(config.urgentCycle) || 18;
+    const uCycle = 18;
 
-    // 呼叫智慧自適應標題繪製函式
+    // 根據 workColor 計算加深後的標註顏色 (供保證休假與飯單記號使用)
+    const darkenedMarkerColor = config.foodTagColor || darkenHexColor(config.workColor, 0.55);
+
     drawSmartHeader(tCtx, config, hYear);
 
     const months = hYear == "0" ? [1, 2, 3, 4, 5, 6] : [7, 8, 9, 10, 11, 12];
@@ -279,19 +626,30 @@ function generateData(config, hYear) {
             const thisDate = new Date(adYear, month - 1, d).getTime();
             
             const diffUrgent = Math.round((thisDate - urgentStart) / 86400000);
-            if (((diffUrgent % uCycle) + uCycle) % uCycle === 0) {
+            const urgentMod = ((diffUrgent % uCycle) + uCycle) % uCycle;
+
+            // 緊招日底色 (第 0 天)
+            if (urgentMod === 0) {
                 tCtx.fillStyle = config.urgentColor;
                 tCtx.fillRect(dx + 0.8, dy + 0.8, cellW - 1.6, cellH - 1.6);
             }
 
+            // 上班日底色
             const diffDays = Math.round((thisDate - cycleStart) / 86400000);
             if (((diffDays % 6) + 6) % 6 === 0 || ((diffDays % 6) + 6) % 6 === 2) {
                 tCtx.fillStyle = config.workColor;
                 tCtx.fillRect(dx + 0.8, dy + 0.8, cellW - 1.6, cellH - 1.6);
             }
 
+            // 保證休假記號：以 18 天週期中的第 6、12 天，頂部繪製加深後的標註色長方形記號
+            if (urgentMod === 6 || urgentMod === 12) {
+                tCtx.fillStyle = darkenedMarkerColor;
+                tCtx.fillRect(dx + 1.5, dy + 1.5, cellW - 3, 4.5);
+            }
+
+            // 飯單交單日左上角三角形標籤 (同樣採用加深後的標註色)
             if (d == parseInt(config.foodOrderDay)) {
-                tCtx.fillStyle = config.foodTagColor;
+                tCtx.fillStyle = darkenedMarkerColor;
                 tCtx.beginPath();
                 tCtx.moveTo(dx + 1, dy + 1);
                 tCtx.lineTo(dx + 12, dy + 1);
@@ -315,7 +673,12 @@ function generateData(config, hYear) {
 
 function draw() {
     const config = {};
-    inputs.forEach(id => config[id] = document.getElementById(id).value);
+    inputs.forEach(id => {
+        const val = document.getElementById(id).value;
+        config[id] = (id === 'titleText' && val.trim() === '') ? null : val;
+    });
+    config.urgentCycle = '18';
+    config.profileName = profiles[currentSlot]?.name || DEFAULT_SLOT_NAMES[currentSlot];
     const dataUrl = generateData(config, config.halfYear);
     
     const img = new Image();
@@ -326,11 +689,17 @@ function draw() {
     img.src = dataUrl;
 }
 
+// 產生基礎檔案名稱 (若標題文字為 null 則不加底線與標題)
 function getBaseName(targetYear) {
     const year = targetYear !== undefined ? targetYear : document.getElementById('year').value;
+    const profileName = (profiles[currentSlot]?.name || DEFAULT_SLOT_NAMES[currentSlot]).replace(/[\\/:*?"<>|]/g, '_');
     const staffId = document.getElementById('staffId').value;
-    const title = document.getElementById('titleText').value;
-    return `${year}年_編號${staffId}_${title}`;
+    const titleRaw = document.getElementById('titleText').value.trim();
+    const parts = [`${year}年`, profileName, `編號${staffId}`];
+    if (titleRaw) {
+        parts.push(titleRaw.replace(/[\\/:*?"<>|]/g, '_'));
+    }
+    return parts.join('_');
 }
 
 async function downloadPDF(yearOffset = 0) {
@@ -341,9 +710,13 @@ async function downloadPDF(yearOffset = 0) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('p', 'mm', 'a4');
     const config = {};
-    inputs.forEach(id => config[id] = document.getElementById(id).value);
+    inputs.forEach(id => {
+        const val = document.getElementById(id).value;
+        config[id] = (id === 'titleText' && val.trim() === '') ? null : val;
+    });
+    config.urgentCycle = '18';
+    config.profileName = profiles[currentSlot]?.name || DEFAULT_SLOT_NAMES[currentSlot];
 
-    // 根據偏移量計算目標民國年份 (0 = 本年度, 1 = 次年度)
     const targetYear = (parseInt(config.year) + yearOffset).toString();
     config.year = targetYear;
 
